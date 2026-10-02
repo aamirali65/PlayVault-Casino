@@ -41,6 +41,16 @@ export default function ProfilePage() {
   const resetBalance = useUserStore((s) => s.resetBalance);
   const [tab, setTab] = useState<ProfileTab>("overview");
 
+  const unlockedAchievements = useMemo(() => {
+    if (!user) return [];
+    const unlocked = new Set(user.achievements.map((a) => a.id));
+    return ALL_ACHIEVEMENTS.map((a) => ({
+      ...a,
+      progress: unlocked.has(a.id) ? a.max : 0,
+      unlocked: unlocked.has(a.id),
+    }));
+  }, [user]);
+
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -59,15 +69,6 @@ export default function ProfilePage() {
   const xpProgress = (user.xp / xpForNextLevel) * 100;
 
   const initials = user.username.slice(0, 2).toUpperCase();
-
-  const unlockedAchievements = useMemo(() => {
-    const unlocked = new Set(user.achievements.map((a) => a.id));
-    return ALL_ACHIEVEMENTS.map((a) => ({
-      ...a,
-      progress: unlocked.has(a.id) ? a.max : 0,
-      unlocked: unlocked.has(a.id),
-    }));
-  }, [user.achievements]);
 
   const tabs: { key: ProfileTab; label: string; icon: typeof Trophy }[] = [
     { key: "overview", label: "Overview", icon: TrendingUp },

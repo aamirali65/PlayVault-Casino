@@ -68,14 +68,13 @@ function LoadingGame() {
 export default function GamePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const user = useUserStore((s) => s.user);
-  const [playerCount, setPlayerCount] = useState(0);
+  const [playerCount, setPlayerCount] = useState(() => randomBetween(100, 5000));
   const [showHowToPlay, setShowHowToPlay] = useState(false);
 
   const game = GAME_MAP[slug];
   const GameComponent = GAME_COMPONENTS[slug];
 
   useEffect(() => {
-    setPlayerCount(randomBetween(100, 5000));
     const interval = setInterval(() => {
       setPlayerCount((prev) => Math.max(50, prev + randomBetween(-20, 20)));
     }, 5000);

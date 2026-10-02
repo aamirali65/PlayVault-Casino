@@ -120,7 +120,7 @@ export default function CrashGame() {
     []
   );
 
-  const gameLoop = useCallback(() => {
+  const gameLoop = useCallback(function loop() {
     const engine = engineRef.current;
     const now = performance.now();
     const delta = lastTimeRef.current ? (now - lastTimeRef.current) / 1000 : 0.016;
@@ -140,7 +140,7 @@ export default function CrashGame() {
 
     setCurrentMultiplier(engine.currentMultiplier);
     drawCanvas(engine.currentMultiplier, false);
-    animFrameRef.current = requestAnimationFrame(gameLoop);
+    animFrameRef.current = requestAnimationFrame(loop);
   }, [drawCanvas, playGame, betAmount]);
 
   const prepareRound = useCallback(() => {

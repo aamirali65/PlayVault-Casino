@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -19,7 +19,7 @@ interface RollHistory {
 export default function DiceGame() {
   const user = useUserStore((s) => s.user);
   const playGame = useUserStore((s) => s.playGame);
-  const engineRef = useRef(new DiceEngine());
+  const engine = useMemo(() => new DiceEngine(), []);
 
   const [betAmount, setBetAmount] = useState(100);
   const [target, setTarget] = useState(50);
@@ -29,8 +29,8 @@ export default function DiceGame() {
   const [lastResult, setLastResult] = useState<{ won: boolean; payout: number } | null>(null);
   const [history, setHistory] = useState<RollHistory[]>([]);
 
-  const multiplier = engineRef.current.calculatePayoutMultiplier(target, mode);
-  const winChance = engineRef.current.calculateWinChance(target, mode);
+  const multiplier = engine.calculatePayoutMultiplier(target, mode);
+  const winChance = engine.calculateWinChance(target, mode);
 
   const animateRoll = useCallback(
     (finalResult: number, cb: () => void) => {
@@ -61,7 +61,6 @@ export default function DiceGame() {
     const clientSeed = generateId();
     const nonce = Date.now();
 
-    const engine = engineRef.current;
     const diceResult = engine.roll(target, mode, betAmount, serverSeed, clientSeed, nonce);
 
     animateRoll(diceResult.result, () => {
@@ -71,7 +70,7 @@ export default function DiceGame() {
       setHistory((prev) => [{ result: diceResult.result, won: diceResult.won }, ...prev].slice(0, 12));
       setRolling(false);
     });
-  }, [user, betAmount, target, mode, rolling, playGame, animateRoll]);
+  }, [user, betAmount, target, mode, rolling, playGame, animateRoll, engine]);
 
   const sliderBg = () => {
     const pct = ((target - 1) / 98) * 100;

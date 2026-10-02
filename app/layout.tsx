@@ -25,9 +25,19 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "PlayVault — Play. Compete. Level Up.",
+  title: "PlayVault Casino — Play. Compete. Level Up.",
   description:
-    "PlayVault is a demo gaming platform where you can play crash games, cards, arcade, dice, slots, and more. Compete in tournaments, climb leaderboards, and level up — all with virtual Demo Coins. No real money involved.",
+    "PlayVault Casino is a demo gaming platform where you can play crash games, cards, arcade, dice, slots, and more. Compete in tournaments, climb leaderboards, and level up - all with virtual Demo Coins. No real money involved.",
+  keywords: [
+    "casino games demo",
+    "crash game",
+    "provably fair",
+    "nextjs gaming platform",
+    "browser games",
+    "tournaments leaderboard",
+  ],
+  applicationName: "PlayVault Casino",
+  authors: [{ name: "PlayVault" }],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

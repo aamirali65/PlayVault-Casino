@@ -62,6 +62,7 @@ export default function BaccaratGame() {
   const [visibleCards, setVisibleCards] = useState<BacCard[]>([]);
   const [scoreboard, setScoreboard] = useState<ScoreDot[]>([]);
   const [roundCount, setRoundCount] = useState(0);
+  const [deckCount, setDeckCount] = useState(0);
 
   const deckRef = useRef<BacCard[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -105,6 +106,7 @@ export default function BaccaratGame() {
     setResult(null);
 
     const roundResult = playRound(deck);
+    setDeckCount(deckRef.current.length);
     const allCards = [...roundResult.playerHand.slice(0, 2), ...roundResult.bankerHand.slice(0, 2)];
     if (roundResult.playerHand.length > 2) allCards.push(roundResult.playerHand[2]);
     if (roundResult.bankerHand.length > 2) allCards.push(roundResult.bankerHand[2]);
@@ -397,7 +399,7 @@ export default function BaccaratGame() {
         <div className="text-xs text-text-secondary">
           Shoe:{" "}
           <span className="font-[family-name:var(--font-mono)] tabular-nums text-text-primary">
-            {deckRef.current.length}
+            {deckCount}
           </span>{" "}
           cards · Round{" "}
           <span className="font-[family-name:var(--font-mono)] tabular-nums text-text-primary">

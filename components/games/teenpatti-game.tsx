@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useUserStore } from "@/store/userStore";
 import { formatCoins, cn, randomBetween } from "@/lib/utils";
 import { generateServerSeed, generateId } from "@/lib/fairness/rng";
@@ -181,6 +181,9 @@ export default function TeenPattiGame() {
   const serverSeedRef = useRef("");
   const nonceRef = useRef(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const botActionRef = useRef<(players: Player[], botIdx: number, pot: number) => void>(
+    () => {}
+  );
 
   const BOT_NAMES = ["Arjun", "Priya", "Ravi", "Meera", "Vikram"];
   const balance = user?.balance ?? 0;
@@ -245,7 +248,7 @@ export default function TeenPattiGame() {
 
       if (currentPlayers[nextIdx].isBot) {
         setCurrentPlayerIdx(nextIdx);
-        botAction(currentPlayers, nextIdx, currentPot);
+        botActionRef.current(currentPlayers, nextIdx, currentPot);
       } else {
         setCurrentPlayerIdx(nextIdx);
         setGameState("playing");
@@ -321,6 +324,10 @@ export default function TeenPattiGame() {
     },
     [betAmount, advanceTurn, storePlayGame]
   );
+
+  useEffect(() => {
+    botActionRef.current = botAction;
+  }, [botAction]);
 
   const handleCall = useCallback(() => {
     if (gameState !== "playing") return;

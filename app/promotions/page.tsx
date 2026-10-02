@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { Gift, Zap, Star, Calendar, Check, Sparkles, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,39 +53,67 @@ const PROMOTIONS_DATA: Omit<Promotion, "claimed">[] = [
 
 const STORAGE_KEY = "playvault_promotions";
 
+const EMPTY_CLAIMED: string[] = [];
+const DAY_MS = 86400000;
+
+const PROMOTIONS = PROMOTIONS_DATA.map((promo) => ({
+  ...promo,
+  daysLeft: Math.ceil((new Date(promo.expiresAt).getTime() - Date.now()) / DAY_MS),
+}));
+
+let claimedCache: string[] = EMPTY_CLAIMED;
+let claimedRawCache: string | null = null;
+const listeners = new Set<() => void>();
+
 function getClaimed(): string[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_CLAIMED;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === claimedRawCache) return claimedCache;
+  let next: string[] = EMPTY_CLAIMED;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    next = raw ? (JSON.parse(raw) as string[]) : EMPTY_CLAIMED;
   } catch {
-    return [];
+    next = EMPTY_CLAIMED;
   }
+  claimedRawCache = raw;
+  claimedCache = next;
+  return claimedCache;
+}
+
+function subscribeClaimed(callback: () => void) {
+  listeners.add(callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    listeners.delete(callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function notifyClaimed() {
+  listeners.forEach((listener) => listener());
 }
 
 function saveClaimed(ids: string[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+  const raw = JSON.stringify(ids);
+  localStorage.setItem(STORAGE_KEY, raw);
+  claimedRawCache = raw;
+  claimedCache = ids;
+  notifyClaimed();
 }
 
 export default function PromotionsPage() {
   const { toast } = useToast();
   const addCoins = useUserStore((s) => s.addCoins);
-  const [claimedIds, setClaimedIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    setClaimedIds(getClaimed());
-  }, []);
+  const claimedIds = useSyncExternalStore(subscribeClaimed, getClaimed, () => EMPTY_CLAIMED);
 
   function claimPromo(promo: Omit<Promotion, "claimed">) {
     if (claimedIds.includes(promo.id)) return;
-    const updated = [...claimedIds, promo.id];
-    setClaimedIds(updated);
-    saveClaimed(updated);
+    saveClaimed([...claimedIds, promo.id]);
     addCoins(promo.reward);
     toast(`+${formatCoins(promo.reward)} claimed!`, "success");
   }
 
-  const totalClaimed = PROMOTIONS_DATA
+  const totalClaimed = PROMOTIONS
     .filter((p) => claimedIds.includes(p.id))
     .reduce((sum, p) => sum + p.reward, 0);
 
@@ -113,11 +141,9 @@ export default function PromotionsPage() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        {PROMOTIONS_DATA.map((promo) => {
+        {PROMOTIONS.map((promo) => {
           const isClaimed = claimedIds.includes(promo.id);
-          const daysLeft = Math.ceil(
-            (new Date(promo.expiresAt).getTime() - Date.now()) / 86400000
-          );
+          const daysLeft = promo.daysLeft;
 
           return (
             <div

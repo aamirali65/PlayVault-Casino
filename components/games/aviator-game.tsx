@@ -151,7 +151,7 @@ export default function AviatorGame() {
     []
   );
 
-  const gameLoop = useCallback(() => {
+  const gameLoop = useCallback(function loop() {
     const engine = engineRef.current;
     const now = performance.now();
     const delta = lastTimeRef.current ? (now - lastTimeRef.current) / 1000 : 0.016;
@@ -203,7 +203,7 @@ export default function AviatorGame() {
 
     setCurrentMultiplier(engine.currentMultiplier);
     drawCanvas(engine.currentMultiplier, false);
-    animFrameRef.current = requestAnimationFrame(gameLoop);
+    animFrameRef.current = requestAnimationFrame(loop);
   }, [bet1Active, bet2Active, bet1.amount, bet2.amount, drawCanvas, playGame]);
 
   const prepareRound = useCallback(() => {
@@ -388,7 +388,7 @@ export default function AviatorGame() {
             const setBet = slotNum === 1 ? setBet1 : setBet2;
             const setActive = slotNum === 1 ? setBet1Active : setBet2Active;
             const result = slotNum === 1 ? result1 : result2;
-            const cashedOut = slotNum === 1 ? engineRef.current.bet1.cashedOut : engineRef.current.bet2.cashedOut;
+            const cashedOut = (slotNum === 1 ? result1 : result2)?.cashedOut ?? false;
 
             return (
               <Card key={slotNum} className="space-y-3">

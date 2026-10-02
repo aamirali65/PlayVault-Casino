@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore, useMemo } from "react";
 import { Gift, Check, Lock, Trophy, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -11,25 +11,52 @@ const REWARDS = [100, 200, 300, 500, 1000, 2000, 5000];
 const DAY_ICONS = ["🪙", "💎", "🎁", "🏆", "💎", "🎁", "👑"];
 const STORAGE_KEY = "playvault_daily_rewards";
 
+const EMPTY_DAYS: number[] = [];
+
+let claimedCache: number[] = EMPTY_DAYS;
+let claimedRawCache: string | null = null;
+const listeners = new Set<() => void>();
+
 function getClaimedDays(): number[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_DAYS;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === claimedRawCache) return claimedCache;
+  let next: number[] = EMPTY_DAYS;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw);
+    const data = raw ? (JSON.parse(raw) as { date?: string; claimedDays?: number[] }) : null;
     const today = new Date().toDateString();
-    if (data.date !== today) return [];
-    return data.claimedDays || [];
+    next = data && data.date === today ? (data.claimedDays ?? EMPTY_DAYS) : EMPTY_DAYS;
   } catch {
-    return [];
+    next = EMPTY_DAYS;
   }
+  claimedRawCache = raw;
+  claimedCache = next;
+  return claimedCache;
+}
+
+function subscribeClaimed(callback: () => void) {
+  listeners.add(callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    listeners.delete(callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function notifyClaimed() {
+  listeners.forEach((listener) => listener());
 }
 
 function saveClaimedDays(days: number[]) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ date: new Date().toDateString(), claimedDays: days })
-  );
+  const raw = JSON.stringify({ date: new Date().toDateString(), claimedDays: days });
+  localStorage.setItem(STORAGE_KEY, raw);
+  claimedRawCache = raw;
+  claimedCache = days;
+  notifyClaimed();
+}
+
+function subscribeNothing() {
+  return () => {};
 }
 
 function getCurrentDay(): number {
@@ -40,23 +67,19 @@ function getCurrentDay(): number {
 export default function RewardsPage() {
   const { toast } = useToast();
   const addCoins = useUserStore((s) => s.addCoins);
-  const [claimedDays, setClaimedDays] = useState<number[]>([]);
-  const [currentDay, setCurrentDay] = useState(1);
+  const claimedDays = useSyncExternalStore(subscribeClaimed, getClaimedDays, () => EMPTY_DAYS);
+  const currentDay = useSyncExternalStore(subscribeNothing, getCurrentDay, () => 1);
 
-  useEffect(() => {
-    setClaimedDays(getClaimedDays());
-    setCurrentDay(getCurrentDay());
-  }, []);
-
-  const totalClaimed = claimedDays.reduce((sum, d) => sum + REWARDS[d - 1], 0);
+  const totalClaimed = useMemo(
+    () => claimedDays.reduce((sum, d) => sum + REWARDS[d - 1], 0),
+    [claimedDays]
+  );
   const streak = claimedDays.length;
 
   function claimReward(day: number) {
     if (day !== currentDay || claimedDays.includes(day)) return;
     const amount = REWARDS[day - 1];
-    const updated = [...claimedDays, day];
-    setClaimedDays(updated);
-    saveClaimedDays(updated);
+    saveClaimedDays([...claimedDays, day]);
     addCoins(amount);
     toast(`+${formatCoins(amount)} claimed!`, "success");
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useUserStore } from "@/store/userStore";
 import { formatCoins } from "@/lib/utils";
 import { generateServerSeed, generateId } from "@/lib/fairness/rng";
@@ -42,7 +42,7 @@ const BET_OPTIONS: { type: BetType; label: string; color?: string }[] = [
 export default function RouletteGame() {
   const user = useUserStore((s) => s.user);
   const playGame = useUserStore((s) => s.playGame);
-  const engineRef = useRef(new RouletteEngine());
+  const engine = useMemo(() => new RouletteEngine(), []);
 
   const [betAmount, setBetAmount] = useState(100);
   const [betType, setBetType] = useState<BetType>("red");
@@ -71,7 +71,6 @@ export default function RouletteGame() {
     const clientSeed = generateId();
     const nonce = Date.now();
 
-    const engine = engineRef.current;
     const result = engine.spin(serverSeed, clientSeed, nonce);
     const won = engine.checkWin(betType, result, betNumber);
     const payout = won ? engine.calculatePayout(betType, betAmount, betNumber) : 0;
@@ -90,7 +89,7 @@ export default function RouletteGame() {
       setSpinning(false);
       setShowResult(true);
     }, 4500);
-  }, [user, betAmount, betType, betNumber, spinning, playGame, wheelRotation, balance]);
+  }, [user, betAmount, betType, betNumber, spinning, playGame, wheelRotation, balance, engine]);
 
   return (
     <div className="flex h-full min-h-[600px] flex-col lg:flex-row">
@@ -209,7 +208,7 @@ export default function RouletteGame() {
             }}
           >
             {Array.from({ length: 37 }).map((_, i) => {
-              const color = engineRef.current.getColor(i);
+              const color = engine.getColor(i);
               const angle = (i / 37) * 360;
               return (
                 <div

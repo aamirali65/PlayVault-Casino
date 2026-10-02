@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -12,10 +12,17 @@ import { generateServerSeed, hashServerSeed, generateId } from "@/lib/fairness/r
 const QUICK_TARGETS = [1.5, 2, 5, 10];
 const QUICK_BETS = [100, 500, 1000, 5000];
 
+const PARTICLES = Array.from({ length: 20 }, () => ({
+  left: Math.random() * 100,
+  top: Math.random() * 100,
+  size: 4 + Math.random() * 8,
+  duration: 0.5 + Math.random() * 0.5,
+}));
+
 export default function LimboGame() {
   const user = useUserStore((s) => s.user);
   const playGame = useUserStore((s) => s.playGame);
-  const engineRef = useRef(new LimboEngine());
+  const engine = useMemo(() => new LimboEngine(), []);
 
   const [betAmount, setBetAmount] = useState(100);
   const [targetMultiplier, setTargetMultiplier] = useState(2);
@@ -39,8 +46,8 @@ export default function LimboGame() {
 
   const [history, setHistory] = useState<{ result: number; won: boolean }[]>([]);
 
-  const winChance = engineRef.current.calculateWinChance(targetMultiplier);
-  const potentialPayout = engineRef.current.calculatePayoutPreview(targetMultiplier, betAmount);
+  const winChance = engine.calculateWinChance(targetMultiplier);
+  const potentialPayout = engine.calculatePayoutPreview(targetMultiplier, betAmount);
 
   const animateResult = useCallback(
     (finalResult: number, won: boolean) => {
@@ -81,7 +88,6 @@ export default function LimboGame() {
     setNonce(newNonce);
 
     setIsPlaying(true);
-    const engine = engineRef.current;
     const { result, won, payout } = engine.play(targetMultiplier, betAmount, newServerSeed, newClientSeed, newNonce);
 
     playGame("Limbo", betAmount, payout, `Target: ${targetMultiplier.toFixed(2)}x, Result: ${result.toFixed(2)}x`);
@@ -90,7 +96,7 @@ export default function LimboGame() {
     setHistory((prev) => [{ result, won }, ...prev].slice(0, 12));
     animateResult(result, won);
     setTimeout(() => setIsPlaying(false), 900);
-  }, [user, betAmount, targetMultiplier, isPlaying, playGame, animateResult, serverSeed, clientSeed, nonce]);
+  }, [user, betAmount, targetMultiplier, isPlaying, playGame, animateResult, serverSeed, clientSeed, nonce, engine]);
 
   useEffect(() => {
     return () => cancelAnimationFrame(animFrameRef.current);
@@ -287,18 +293,18 @@ export default function LimboGame() {
 
             {animating && (
               <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {Array.from({ length: 20 }).map((_, i) => (
+                {PARTICLES.map((particle, i) => (
                   <div
                     key={i}
                     className="absolute rounded-full animate-ping"
                     style={{
-                      left: `${Math.random() * 100}%`,
-                      top: `${Math.random() * 100}%`,
-                      width: `${4 + Math.random() * 8}px`,
-                      height: `${4 + Math.random() * 8}px`,
+                      left: `${particle.left}%`,
+                      top: `${particle.top}%`,
+                      width: `${particle.size}px`,
+                      height: `${particle.size}px`,
                       backgroundColor: lastResult?.won ? "#00F5A0" : "#FF3366",
                       opacity: 0.3,
-                      animationDuration: `${0.5 + Math.random() * 0.5}s`,
+                      animationDuration: `${particle.duration}s`,
                     }}
                   />
                 ))}
